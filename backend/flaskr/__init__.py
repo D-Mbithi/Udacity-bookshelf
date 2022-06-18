@@ -4,7 +4,7 @@ from flask_sqlalchemy import SQLAlchemy  # , or_
 from flask_cors import CORS
 import random
 
-from models import setup_db, Book
+from models import setup_db, Book, db
 
 BOOKS_PER_SHELF = 8
 
@@ -66,12 +66,44 @@ def create_app(test_config=None):
     # @TODO: Write a route that will delete a single book.
     #        Response body keys: 'success', 'deleted'(id of deleted book), 'books' and 'total_books'
     #        Response body keys: 'success', 'books' and 'total_books'
-
     # TEST: When completed, you will be able to delete a single book by clicking on the trashcan.
+
+    @app.route('/books/<int:book_id>', methods=['DELETE'])
+    def delete_book(book_id):
+        book = Book.query.get_or_404(book_id)
+
+        print(book)
+        try:
+            book.delete()
+        except:
+            db.session.rollback()
+            abort(404)
+        finally:
+            db.session.close()
+
+        return jsonify({
+            'success': 'Book deleted',
+            'total_books': len(Book.query.all())
+        })
+
 
     # @TODO: Write a route that create a new book.
     #        Response body keys: 'success', 'created'(id of created book), 'books' and 'total_books'
     # TEST: When completed, you will be able to a new book using the form. Try doing so from the last page of books.
     #       Your new book should show up immediately after you submit it at the end of the page.
+    @app.route('/books', methods=['POST'])
+    def create_books():
+        data = request.json
+
+        book = Book(author= data['author'], rating= data['rating'], title= data['title'])
+
+        book.insert()
+
+        total_books = len(Book.query.all())
+
+        return jsonify({
+            'total_books': total_books,
+            'success': 'book added'
+        })
 
     return app
